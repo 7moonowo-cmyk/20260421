@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>攝影機影像畫布</title>
+    <style>
+        /* 確保畫布填滿全螢幕並移除邊距 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+  </head>
+  <body>
+    <canvas id="cameraCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('cameraCanvas');
+        const ctx = canvas.getContext('2d');
+        let video = document.createElement('video');
+
+        // 1. 初始化畫布尺寸為全螢幕
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // 2. 取得攝影機串流
+        async function setupCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "user" },
+                    audio: false
+                });
+                
+                video.srcObject = stream;
+                video.muted = true; // 必備：解決自動播放限制導致的灰屏
+                video.setAttribute("playsinline", true);
+                
+                // 等待影片元數據載入後再播放
+                video.onloadedmetadata = () => {
+                    video.play();
+                    requestAnimationFrame(drawTick);
+                };
+            } catch (err) {
+                console.error("攝影機啟動失敗:", err);
+                alert("請確保已允許攝影機存取權限，且正在使用 HTTPS 或 localhost 環境開啟。");
+            }
+        }
+
+        // 3. 繪製迴圈
+        function drawTick() {
+            // 背景填色（確保每幀都更新）
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 只有在影片狀態準備好時才繪製 (readyState 2 以上)
+            if (video.readyState >= 2) {
+                const drawWidth = canvas.width * 0.6;
+                const drawHeight = canvas.height * 0.6;
+                const x = (canvas.width - drawWidth) / 2;
+                const y = (canvas.height - drawHeight) / 2;
+
+                ctx.drawImage(video, x, y, drawWidth, drawHeight);
+            }
+
+            requestAnimationFrame(drawTick);
+        }
+
+        // 監聽視窗大小改變
+        window.addEventListener('resize', resizeCanvas);
+
+        // 啟動
+        resizeCanvas();
+        setupCamera();
+    </script>
+  </body>
+</html>
